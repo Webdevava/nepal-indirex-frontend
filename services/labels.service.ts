@@ -47,11 +47,25 @@ export const LabelProgramSchema = z.object({
 
 export type LabelProgram = z.infer<typeof LabelProgramSchema>;
 
+// Define LabelMovie schema
+export const LabelMovieSchema = z.object({
+  label_id: z.number().optional(),
+  movie_name: z.string().min(1, 'Movie name is required'),
+  genre: z.string().nullable(),
+  director: z.string().nullable(),
+  release_year: z.number().int().positive().nullable(),
+  language: z.string().nullable(),
+  duration: z.number().int().positive().nullable(), // Duration in minutes
+  rating: z.string().nullable(), // Movie rating (e.g., PG, R, etc.)
+});
+
+export type LabelMovie = z.infer<typeof LabelMovieSchema>;
+
 // Define Label schema
 export const LabelSchema = z.object({
   id: z.number(),
   event_ids: z.array(z.string()),
-  label_type: z.enum(['song', 'ad', 'error', 'program']),
+  label_type: z.enum(['song', 'ad', 'error', 'program', 'movie']),
   created_by: z.string(),
   created_at: z.date(),
   start_time: z.string(),
@@ -62,6 +76,7 @@ export const LabelSchema = z.object({
   ad: LabelAdSchema.nullable(),
   error: LabelErrorSchema.nullable(),
   program: LabelProgramSchema.nullable(),
+  movie: LabelMovieSchema.nullable(),
 });
 
 export type Label = z.infer<typeof LabelSchema>;
@@ -69,22 +84,25 @@ export type Label = z.infer<typeof LabelSchema>;
 // Define CreateLabel schema
 export const CreateLabelSchema = z.object({
   event_ids: z.array(z.string()).min(1, 'At least one event ID is required'),
-  label_type: z.enum(['song', 'ad', 'error', 'program']),
-  notes: z.string().nullable(),
+  label_type: z.enum(['song', 'ad', 'error', 'program', 'movie']),
+  notes: z.string().nullable().optional(),
   song: LabelSongSchema.optional(),
   ad: LabelAdSchema.optional(),
   error: LabelErrorSchema.optional(),
   program: LabelProgramSchema.optional(),
+  movie: LabelMovieSchema.optional(),
 }).refine(
   (data) => {
     if (data.label_type === 'song' && !data.song) return false;
     if (data.label_type === 'ad' && !data.ad) return false;
     if (data.label_type === 'error' && !data.error) return false;
     if (data.label_type === 'program' && !data.program) return false;
-    if (data.label_type === 'song' && (data.ad || data.error || data.program)) return false;
-    if (data.label_type === 'ad' && (data.song || data.error || data.program)) return false;
-    if (data.label_type === 'error' && (data.song || data.ad || data.program)) return false;
-    if (data.label_type === 'program' && (data.song || data.ad || data.error)) return false;
+    if (data.label_type === 'movie' && !data.movie) return false;
+    if (data.label_type === 'song' && (data.ad || data.error || data.program || data.movie)) return false;
+    if (data.label_type === 'ad' && (data.song || data.error || data.program || data.movie)) return false;
+    if (data.label_type === 'error' && (data.song || data.ad || data.program || data.movie)) return false;
+    if (data.label_type === 'program' && (data.song || data.ad || data.error || data.movie)) return false;
+    if (data.label_type === 'movie' && (data.song || data.ad || data.error || data.program)) return false;
     return true;
   },
   {
@@ -97,23 +115,26 @@ export type CreateLabel = z.infer<typeof CreateLabelSchema>;
 
 // Define UpdateLabel schema
 export const UpdateLabelSchema = z.object({
-  label_type: z.enum(['song', 'ad', 'error', 'program']).optional(),
+  label_type: z.enum(['song', 'ad', 'error', 'program', 'movie']).optional(),
   notes: z.string().nullable().optional(),
   event_ids: z.array(z.string()).optional(),
   song: LabelSongSchema.optional(),
   ad: LabelAdSchema.optional(),
   error: LabelErrorSchema.optional(),
   program: LabelProgramSchema.optional(),
+  movie: LabelMovieSchema.optional(),
 }).refine(
   (data) => {
     if (data.label_type && data.label_type === 'song' && !data.song) return false;
     if (data.label_type && data.label_type === 'ad' && !data.ad) return false;
     if (data.label_type && data.label_type === 'error' && !data.error) return false;
     if (data.label_type && data.label_type === 'program' && !data.program) return false;
-    if (data.label_type && data.label_type === 'song' && (data.ad || data.error || data.program)) return false;
-    if (data.label_type && data.label_type === 'ad' && (data.song || data.error || data.program)) return false;
-    if (data.label_type && data.label_type === 'error' && (data.song || data.ad || data.program)) return false;
-    if (data.label_type && data.label_type === 'program' && (data.song || data.ad || data.error)) return false;
+    if (data.label_type && data.label_type === 'movie' && !data.movie) return false;
+    if (data.label_type && data.label_type === 'song' && (data.ad || data.error || data.program || data.movie)) return false;
+    if (data.label_type && data.label_type === 'ad' && (data.song || data.error || data.program || data.movie)) return false;
+    if (data.label_type && data.label_type === 'error' && (data.song || data.ad || data.program || data.movie)) return false;
+    if (data.label_type && data.label_type === 'program' && (data.song || data.ad || data.error || data.movie)) return false;
+    if (data.label_type && data.label_type === 'movie' && (data.song || data.ad || data.error || data.program)) return false;
     return true;
   },
   {
@@ -123,6 +144,26 @@ export const UpdateLabelSchema = z.object({
 );
 
 export type UpdateLabel = z.infer<typeof UpdateLabelSchema>;
+
+// Define ProgramGuideLabel schema
+export const ProgramGuideLabelSchema = z.object({
+  id: z.number(),
+  label_type: z.enum(['song', 'ad', 'error', 'program', 'movie']),
+  created_by: z.string(),
+  created_at: z.date(),
+  start_time: z.string(),
+  end_time: z.string(),
+  notes: z.string().nullable(),
+  device_id: z.string().nullable(),
+  image_paths: z.array(z.string().nullable()),
+  song: LabelSongSchema.nullable(),
+  ad: LabelAdSchema.nullable(),
+  error: LabelErrorSchema.nullable(),
+  program: LabelProgramSchema.nullable(),
+  movie: LabelMovieSchema.nullable(),
+});
+
+export type ProgramGuideLabel = z.infer<typeof ProgramGuideLabelSchema>;
 
 // Define GetUnlabeledEventsOptions type
 export interface GetUnlabeledEventsOptions {
@@ -158,6 +199,11 @@ export type LabelsListResponse = ApiResponse<{
   total: number;
   totalPages: number;
   currentPage: number;
+}>;
+
+export type ProgramGuideResponse = ApiResponse<{
+  date: string;
+  labels: ProgramGuideLabel[];
 }>;
 
 // Helper function to get cookie value
@@ -291,6 +337,46 @@ export class LabelService {
       return response.data as LabelResponse;
     } catch (error: any) {
       throw new Error(`Bulk label deletion failed: ${error.message}`);
+    }
+  }
+
+  static async getProgramGuideByDate(date: string, deviceId: string, sort: 'asc' | 'desc' = 'desc'): Promise<ProgramGuideResponse> {
+    try {
+      const response = await api.get(`/labels/program-guide/${date}/${deviceId}`, { 
+        params: { sort } 
+      });
+      return response.data as ProgramGuideResponse;
+    } catch (error: any) {
+      throw new Error(`Failed to fetch program guide: ${error.message}`);
+    }
+  }
+
+  static async getMovies(options: GetLabelsOptions = {}): Promise<LabelsListResponse> {
+    try {
+      // Apply device ID logic based on user role
+      const processedOptions = applyDeviceIdLogic(options) as GetLabelsOptions;
+
+      // Force labelType to 'movie'
+      const movieOptions = {
+        ...processedOptions,
+        labelType: 'movie',
+      };
+
+      // Convert Date objects to formatted strings without timezone conversion
+      const params = {
+        ...movieOptions,
+        startDate: movieOptions.startDate instanceof Date 
+          ? formatDateForAPI(movieOptions.startDate) 
+          : movieOptions.startDate,
+        endDate: movieOptions.endDate instanceof Date 
+          ? formatDateForAPI(movieOptions.endDate) 
+          : movieOptions.endDate,
+      };
+
+      const response = await api.get('/labels/movies', { params });
+      return response.data as LabelsListResponse;
+    } catch (error: any) {
+      throw new Error(`Failed to fetch movies: ${error.message}`);
     }
   }
 }

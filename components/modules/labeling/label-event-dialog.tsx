@@ -73,14 +73,14 @@ interface ComboboxProps {
   className?: string;
 }
 
-function Combobox({ 
-  value, 
-  onValueChange, 
-  options, 
-  placeholder, 
-  searchPlaceholder, 
+function Combobox({
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  searchPlaceholder,
   disabled = false,
-  className = "w-full"
+  className = "w-full",
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
 
@@ -148,6 +148,7 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
       ad: undefined,
       error: undefined,
       program: undefined,
+      movie: undefined,
     },
   });
 
@@ -162,11 +163,11 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
   useEffect(() => {
     const loadBrandsData = async () => {
       try {
-        const response = await fetch('/data/brands.json');
+        const response = await fetch("/data/brands.json");
         const data = await response.json();
         setBrandsData(data);
       } catch (error) {
-        console.error('Failed to load brands data:', error);
+        console.error("Failed to load brands data:", error);
         // Fallback data structure
         setBrandsData([]);
       }
@@ -178,9 +179,9 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
   // Auto-select category and sector when product is selected
   useEffect(() => {
     if (selectedBrand && selectedBrand !== "other" && selectedProduct) {
-      const brand = brandsData.find(b => b.name === selectedBrand);
+      const brand = brandsData.find((b) => b.name === selectedBrand);
       if (brand) {
-        const product = brand.products.find(p => p.name === selectedProduct);
+        const product = brand.products.find((p) => p.name === selectedProduct);
         if (product) {
           form.setValue("ad.category", product.category);
           form.setValue("ad.sector", product.sector);
@@ -191,42 +192,27 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
 
   // Get unique brand options
   const brandOptions = [
-    ...brandsData.map(brand => ({
+    ...brandsData.map((brand) => ({
       value: brand.name,
-      label: brand.name
+      label: brand.name,
     })),
-    { value: "other", label: "Other (Custom Brand)" }
+    { value: "other", label: "Other (Custom Brand)" },
   ];
 
   // Get products for selected brand
   const getProductsForBrand = (brandName: string) => {
-    const brand = brandsData.find(b => b.name === brandName);
+    const brand = brandsData.find((b) => b.name === brandName);
     return brand ? brand.products : [];
   };
 
   // Get product options for selected brand
-  const productOptions = selectedBrand && selectedBrand !== "other"
-    ? getProductsForBrand(selectedBrand).map(product => ({
-        value: product.name,
-        label: product.name
-      }))
-    : [];
-
-  // Get categories for selected brand
-  // const categoryOptions = selectedBrand && selectedBrand !== "other"
-  //   ? [...new Set(getProductsForBrand(selectedBrand).map(p => p.category))].map(category => ({
-  //       value: category,
-  //       label: category
-  //     }))
-  //   : [];
-
-  // Get sectors for selected brand
-  // const sectorOptions = selectedBrand && selectedBrand !== "other"
-  //   ? [...new Set(getProductsForBrand(selectedBrand).map(p => p.sector))].map(sector => ({
-  //       value: sector,
-  //       label: sector
-  //     }))
-  //   : [];
+  const productOptions =
+    selectedBrand && selectedBrand !== "other"
+      ? getProductsForBrand(selectedBrand).map((product) => ({
+          value: product.name,
+          label: product.name,
+        }))
+      : [];
 
   // Check if form is valid for submission
   const isFormValid = () => {
@@ -241,39 +227,56 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
           watchedValues.song?.language &&
           watchedValues.song?.release_year
         );
-      
+
       case "ad":
         const adValid = !!(
           watchedValues.ad?.type &&
           watchedValues.ad?.brand &&
           watchedValues.ad?.format
         );
-        
+
         if (isCustomBrand) {
-          return adValid && !!(
-            watchedValues.ad?.product &&
-            watchedValues.ad?.category &&
-            watchedValues.ad?.sector
+          return (
+            adValid &&
+            !!(
+              watchedValues.ad?.product &&
+              watchedValues.ad?.category &&
+              watchedValues.ad?.sector
+            )
           );
         } else if (watchedValues.ad?.brand && watchedValues.ad?.brand !== "other") {
-          return adValid && !!(
-            watchedValues.ad?.product &&
-            watchedValues.ad?.category &&
-            watchedValues.ad?.sector
+          return (
+            adValid &&
+            !!(
+              watchedValues.ad?.product &&
+              watchedValues.ad?.category &&
+              watchedValues.ad?.sector
+            )
           );
         }
         return adValid;
-      
+
       case "error":
         return !!(watchedValues.error?.error_type);
-      
+
       case "program":
         return !!(
           watchedValues.program?.program_name &&
           watchedValues.program?.genre &&
           watchedValues.program?.language
         );
-      
+
+      case "movie":
+        return !!(
+          watchedValues.movie?.movie_name &&
+          watchedValues.movie?.genre &&
+          watchedValues.movie?.director &&
+          watchedValues.movie?.language &&
+          watchedValues.movie?.release_year &&
+          watchedValues.movie?.duration &&
+          watchedValues.movie?.rating
+        );
+
       default:
         return false;
     }
@@ -315,11 +318,9 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
     }
   };
 
-
   useEffect(() => {
-  form.setValue("event_ids", selectedEventIds);
-}, [selectedEventIds, form]);
-
+    form.setValue("event_ids", selectedEventIds);
+  }, [selectedEventIds, form]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -351,6 +352,7 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                       form.setValue("ad", undefined);
                       form.setValue("error", undefined);
                       form.setValue("program", undefined);
+                      form.setValue("movie", undefined);
                       setIsCustomBrand(false);
                     }}
                     value={field.value || ""}
@@ -366,6 +368,7 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                       <SelectItem value="ad">Ad</SelectItem>
                       <SelectItem value="error">Error</SelectItem>
                       <SelectItem value="program">Program</SelectItem>
+                      <SelectItem value="movie">Movie</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -476,7 +479,7 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="ad.brand"
@@ -541,7 +544,8 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                         />
                       </>
                     ) : (
-                      selectedBrand && selectedBrand !== "other" && (
+                      selectedBrand &&
+                      selectedBrand !== "other" && (
                         <>
                           <FormField
                             control={form.control}
@@ -570,10 +574,10 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                               <FormItem>
                                 <FormLabel>Category</FormLabel>
                                 <FormControl>
-                                  <Input 
-                                    {...field} 
-                                    value={field.value ?? ""} 
-                                    placeholder="Auto-selected based on product" 
+                                  <Input
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    placeholder="Auto-selected based on product"
                                     disabled={true}
                                     className="bg-gray-50"
                                   />
@@ -589,10 +593,10 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                               <FormItem>
                                 <FormLabel>Sector</FormLabel>
                                 <FormControl>
-                                  <Input 
-                                    {...field} 
-                                    value={field.value ?? ""} 
-                                    placeholder="Auto-selected based on product" 
+                                  <Input
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    placeholder="Auto-selected based on product"
                                     disabled={true}
                                     className="bg-gray-50"
                                   />
@@ -611,9 +615,9 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Format *</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            value={field.value || ""} 
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || ""}
                             disabled={isSubmitting}
                             defaultValue="CAPB"
                           >
@@ -772,6 +776,153 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                     />
                   </>
                 )}
+
+                {labelType === "movie" && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="movie.movie_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Movie Name *</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} placeholder="Enter movie name" disabled={isSubmitting} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="movie.genre"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Genre *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""} disabled={isSubmitting}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select genre" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Action">Action</SelectItem>
+                              <SelectItem value="Adventure">Adventure</SelectItem>
+                              <SelectItem value="Animation">Animation</SelectItem>
+                              <SelectItem value="Biography">Biography</SelectItem>
+                              <SelectItem value="Comedy">Comedy</SelectItem>
+                              <SelectItem value="Crime">Crime</SelectItem>
+                              <SelectItem value="Documentary">Documentary</SelectItem>
+                              <SelectItem value="Drama">Drama</SelectItem>
+                              <SelectItem value="Family">Family</SelectItem>
+                              <SelectItem value="Fantasy">Fantasy</SelectItem>
+                              <SelectItem value="History">History</SelectItem>
+                              <SelectItem value="Horror">Horror</SelectItem>
+                              <SelectItem value="Music">Music</SelectItem>
+                              <SelectItem value="Musical">Musical</SelectItem>
+                              <SelectItem value="Mystery">Mystery</SelectItem>
+                              <SelectItem value="Romance">Romance</SelectItem>
+                              <SelectItem value="Sci-Fi">Sci-Fi</SelectItem>
+                              <SelectItem value="Thriller">Thriller</SelectItem>
+                              <SelectItem value="War">War</SelectItem>
+                              <SelectItem value="Western">Western</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="movie.director"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Director *</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} placeholder="Enter director" disabled={isSubmitting} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="movie.release_year"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Release Year *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              placeholder="Enter release year"
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="movie.language"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Language *</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value ?? ""} placeholder="Enter language" disabled={isSubmitting} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="movie.duration"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Duration (minutes) *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              placeholder="Enter duration in minutes"
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="movie.rating"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Rating *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""} disabled={isSubmitting}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select rating" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="G">G</SelectItem>
+                              <SelectItem value="PG">PG</SelectItem>
+                              <SelectItem value="PG-13">PG-13</SelectItem>
+                              <SelectItem value="R">R</SelectItem>
+                              <SelectItem value="NC-17">NC-17</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
               </div>
             )}
 
@@ -798,10 +949,7 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting || !isFormValid()}
-              >
+              <Button type="submit" disabled={isSubmitting || !isFormValid()}>
                 {isSubmitting ? "Creating..." : "Create Label"}
               </Button>
             </DialogFooter>
