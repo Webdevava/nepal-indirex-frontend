@@ -140,7 +140,7 @@ function isValidTimeFormat(timeStr: string): boolean {
 }
 
 // Helper function to validate labelType from URL parameter
-function isValidLabelType(type: string): boolean {
+function isValidLabelType(type: string): type is "all" | "song" | "ad" | "error" | "program" | "movie" {
   return ["all", "song", "ad", "error", "program", "movie"].includes(type);
 }
 
@@ -193,7 +193,7 @@ export default function EventFilters({
     let initialSort = defaultSort;
     let initialDeviceId = defaultDeviceId;
     let initialCreatedBy = defaultCreatedBy;
-    let initialLabelType = defaultLabelType;
+    let initialLabelType: "all" | "song" | "ad" | "error" | "program" | "movie" = defaultLabelType;
 
     if (urlParams.date) {
       const urlDate = parseDateFromUrl(urlParams.date);
@@ -257,11 +257,9 @@ export default function EventFilters({
   // Initialize form with URL parameters, initial filters, or defaults
   useEffect(() => {
     if (!isInitialized) {
-      let formData: Partial<FilterFormValues> = {};
-
       const initialValues = getInitialValues();
 
-      formData = {
+      const formData: Partial<FilterFormValues> = {
         date: initialValues.date,
         startTime: initialValues.startTime,
         endTime: initialValues.endTime,
@@ -296,7 +294,11 @@ export default function EventFilters({
           formData.deviceId = "";
         }
 
-        if (initialFilters.labelType && !urlParams.labelType) {
+        if (
+          initialFilters.labelType &&
+          !urlParams.labelType &&
+          isValidLabelType(initialFilters.labelType)
+        ) {
           formData.labelType = initialFilters.labelType;
         }
 
@@ -351,16 +353,10 @@ export default function EventFilters({
     };
   };
 
-  const onSubmit = (data: FilterFormValues) => {
-    const filters = buildFilters(data);
-    onFilterChange(filters);
-    setIsOpen(false);
-  };
-
   const onClear = () => {
-    const defaultData = {
+    const defaultData: FilterFormValues = {
       deviceId: "",
-      sort: "desc" as const,
+      sort: "desc",
       date: getDefaultDate(),
       startTime: "00:00",
       endTime: "23:59",
@@ -369,7 +365,13 @@ export default function EventFilters({
     };
 
     form.reset(defaultData);
-    const filters = buildFilters(defaultData as FilterFormValues);
+    const filters = buildFilters(defaultData);
+    onFilterChange(filters);
+    setIsOpen(false);
+  };
+
+  const onSubmit = (data: FilterFormValues) => {
+    const filters = buildFilters(data);
     onFilterChange(filters);
     setIsOpen(false);
   };
