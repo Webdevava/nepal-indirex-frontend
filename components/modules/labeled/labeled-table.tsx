@@ -47,6 +47,7 @@ import {
   LabelAd,
   LabelError,
   LabelProgram,
+  LabelMovie,
   GetLabelsOptions,
 } from "@/services/labels.service";
 import EventFilters from "./labeled-filters";
@@ -71,7 +72,7 @@ function EventTableSkeleton() {
 }
 
 // Define type for details based on Label type
-type LabelDetails = LabelSong | LabelAd | LabelError | LabelProgram | null;
+type LabelDetails = LabelSong | LabelAd | LabelError | LabelProgram | LabelMovie | null;
 
 type LabelWithDetails = Label & {
   details: LabelDetails;
@@ -164,6 +165,25 @@ const columns: ColumnDef<LabelWithDetails>[] = [
                 (S{(details as LabelProgram).season_number || "N/A"}E
                 {(details as LabelProgram).episode_number || "N/A"})
               </span>
+            </div>
+          );
+        case "movie":
+          return (
+            <div className="text-sm">
+              <span className="font-medium">
+                {(details as LabelMovie).movie_name}
+              </span>
+              <div className="text-muted-foreground text-xs">
+                {(details as LabelMovie).director && (
+                  <span>Dir: {(details as LabelMovie).director}</span>
+                )}
+                {(details as LabelMovie).release_year && (
+                  <span className="ml-2">({(details as LabelMovie).release_year})</span>
+                )}
+                {(details as LabelMovie).duration && (
+                  <span className="ml-2">{(details as LabelMovie).duration}min</span>
+                )}
+              </div>
             </div>
           );
         default:
@@ -261,6 +281,12 @@ function LabeledEventsTableContent() {
       urlFilters.createdBy = createdByParam;
     }
 
+    // Get labelType param
+    const labelTypeParam = searchParams.get("labelType");
+    if (labelTypeParam && ["song", "ad", "error", "program", "movie"].includes(labelTypeParam)) {
+      urlFilters.labelType = labelTypeParam;
+    }
+
     // Get date and time params
     const startDateParam = searchParams.get("startDate");
     const startTimeParam = searchParams.get("startTime");
@@ -328,7 +354,10 @@ function LabeledEventsTableContent() {
       params.set("sort", newFilters.sort);
     }
     if (newFilters.createdBy) {
-      params.set("createdBy", newFilters.createdBy); // Add createdBy to URL
+      params.set("createdBy", newFilters.createdBy);
+    }
+    if (newFilters.labelType) {
+      params.set("labelType", newFilters.labelType);
     }
     if (newFilters.startDate) {
       const date =
@@ -369,7 +398,7 @@ function LabeledEventsTableContent() {
       if (response.success && response.data) {
         const labelsWithDetails = response.data.labels!.map((label: Label) => ({
           ...label,
-          details: label.song || label.ad || label.error || label.program,
+          details: label.song || label.ad || label.error || label.program || label.movie,
         }));
         setData(labelsWithDetails);
         setTotalPages(response.data.totalPages);
