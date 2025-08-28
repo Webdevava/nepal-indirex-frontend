@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -149,6 +150,7 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
       error: undefined,
       program: undefined,
       movie: undefined,
+      promo: undefined,
     },
   });
 
@@ -168,7 +170,6 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
         setBrandsData(data);
       } catch (error) {
         console.error("Failed to load brands data:", error);
-        // Fallback data structure
         setBrandsData([]);
       }
     };
@@ -189,6 +190,17 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
       }
     }
   }, [selectedProduct, selectedBrand, brandsData, form]);
+
+  // Sync promo.event_name with promo.program_name and promo.movie_name
+  useEffect(() => {
+    if (labelType === "promo") {
+      const eventName = form.getValues("promo.event_name");
+      if (eventName) {
+        form.setValue("promo.program_name", eventName);
+        form.setValue("promo.movie_name", eventName);
+      }
+    }
+  }, [form.watch("promo.event_name"), labelType, form]);
 
   // Get unique brand options
   const brandOptions = [
@@ -277,6 +289,9 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
           watchedValues.movie?.rating
         );
 
+      case "promo":
+        return !!(watchedValues.promo?.promo_type && watchedValues.promo?.event_name);
+
       default:
         return false;
     }
@@ -305,13 +320,11 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
     form.setValue("ad.brand", value);
     if (value === "other") {
       setIsCustomBrand(true);
-      // Clear other fields when switching to custom
       form.setValue("ad.product", "");
       form.setValue("ad.category", "");
       form.setValue("ad.sector", "");
     } else {
       setIsCustomBrand(false);
-      // Clear other fields when switching brands
       form.setValue("ad.product", "");
       form.setValue("ad.category", "");
       form.setValue("ad.sector", "");
@@ -347,12 +360,13 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                   <Select
                     onValueChange={(value) => {
                       field.onChange(value);
-                      // Reset other fields when label type changes
+                      // Reset all label type fields when label type changes
                       form.setValue("song", undefined);
                       form.setValue("ad", undefined);
                       form.setValue("error", undefined);
                       form.setValue("program", undefined);
                       form.setValue("movie", undefined);
+                      form.setValue("promo", undefined);
                       setIsCustomBrand(false);
                     }}
                     value={field.value || ""}
@@ -369,6 +383,7 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                       <SelectItem value="error">Error</SelectItem>
                       <SelectItem value="program">Program</SelectItem>
                       <SelectItem value="movie">Movie</SelectItem>
+                      <SelectItem value="promo">Promo</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -472,7 +487,6 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                             <SelectContent>
                               <SelectItem value="COMMERCIAL_BREAK">Commercial Break</SelectItem>
                               <SelectItem value="SPOT_OUTSIDE_BREAK">Spot Outside Break</SelectItem>
-                              <SelectItem value="AUTO_PROMO">Auto Promo</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -917,6 +931,58 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                               <SelectItem value="NC-17">NC-17</SelectItem>
                             </SelectContent>
                           </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                {labelType === "promo" && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="promo.promo_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Promo Type *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""} disabled={isSubmitting}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select promo type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="TRAILER">Trailer</SelectItem>
+                              <SelectItem value="ANNOUNCEMENT">Announcement</SelectItem>
+                              <SelectItem value="TEASER">Teaser</SelectItem>
+                              <SelectItem value="PROMO_SPOT">Promo Spot</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="promo.event_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Event Name *</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              placeholder="Enter event name"
+                              disabled={isSubmitting}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                // Sync program_name and movie_name with event_name
+                                form.setValue("promo.program_name", e.target.value);
+                                form.setValue("promo.movie_name", e.target.value);
+                              }}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
