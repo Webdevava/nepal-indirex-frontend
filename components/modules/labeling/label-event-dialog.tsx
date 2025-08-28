@@ -923,13 +923,13 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                                 <SelectValue placeholder="Select rating" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
-                              <SelectItem value="G">G</SelectItem>
-                              <SelectItem value="PG">PG</SelectItem>
-                              <SelectItem value="PG-13">PG-13</SelectItem>
-                              <SelectItem value="R">R</SelectItem>
-                              <SelectItem value="NC-17">NC-17</SelectItem>
-                            </SelectContent>
+                           <SelectContent>
+  <SelectItem value="G">G - All ages, suitable for everyone.</SelectItem>
+  <SelectItem value="PG">PG - Parental guidance, may not suit kids.</SelectItem>
+  <SelectItem value="PG-13">PG-13 - Caution for under 13, mature themes.</SelectItem>
+  <SelectItem value="R">R - Under 17 needs adult, adult content.</SelectItem>
+  <SelectItem value="NC-17">NC-17 - Adults only, explicit content.</SelectItem>
+</SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>
