@@ -13,8 +13,8 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
+  CommandInput,
   CommandList,
 } from "@/components/ui/command";
 import {
@@ -48,12 +48,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { LabelService, CreateLabelSchema, CreateLabel } from "@/services/labels.service";
-
-interface LabelEventsDialogProps {
-  selectedEventIds: string[];
-  onSuccess?: () => void;
-}
+import { LabelService, UpdateLabelSchema, UpdateLabel, Label } from "@/services/labels.service";
+import { Pencil } from "lucide-react";
 
 interface BrandData {
   name: string;
@@ -133,7 +129,12 @@ function Combobox({
   );
 }
 
-export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDialogProps) {
+interface EditLabelDialogProps {
+  label: Label;
+  onSuccess?: () => void;
+}
+
+export function EditLabelDialog({ label, onSuccess }: EditLabelDialogProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [brandsData, setBrandsData] = useState<BrandData[]>([]);
@@ -141,31 +142,28 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [isCustomSport, setIsCustomSport] = useState(false);
 
-  const form = useForm<CreateLabel>({
-    resolver: zodResolver(CreateLabelSchema),
+  const form = useForm<UpdateLabel>({
+    resolver: zodResolver(UpdateLabelSchema),
     defaultValues: {
-      event_ids: selectedEventIds,
-      label_type: undefined,
-      notes: "Label created for selected events",
-      song: undefined,
-      ad: undefined,
-      error: undefined,
-      program: undefined,
-      movie: undefined,
-      promo: undefined,
-      sports: undefined,
+      event_ids: label.event_ids,
+      label_type: label.label_type,
+      notes: label.notes || "",
+      song: label.song || undefined,
+      ad: label.ad || undefined,
+      error: label.error || undefined,
+      program: label.program || undefined,
+      movie: label.movie || undefined,
+      promo: label.promo || undefined,
+      sports: label.sports || undefined,
     },
   });
 
   const labelType = form.watch("label_type");
   const selectedBrand = form.watch("ad.brand");
   const selectedProduct = form.watch("ad.product");
-  const adType = form.watch("ad.type");
+  const adType = form.watch("ad.type") as "COMMERCIAL_BREAK" | "SPOT_OUTSIDE_BREAK" | "PSA" | undefined;
   const selectedCategory = form.watch("ad.category");
   const selectedSportType = form.watch("sports.sport_type");
-
-  // Watch all form values to determine if form is valid
-  const watchedValues = form.watch();
 
   // Load brands data
   useEffect(() => {
@@ -183,6 +181,32 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
     loadBrandsData();
   }, []);
 
+  // Initialize custom brand, category, and sport states based on initial label data
+  useEffect(() => {
+    if (label.label_type === "ad" && label.ad) {
+      if (label.ad.type === "PSA") {
+        setIsCustomBrand(true);
+        if (label.ad.category && !["Safety", "Environment", "Health", "Education"].includes(label.ad.category)) {
+          setIsCustomCategory(true);
+        }
+      } else if (label.ad && label.ad.brand && !brandsData.some((b) => b.name === label.ad!.brand)) {
+        setIsCustomBrand(true);
+      }
+    }
+    if (label.label_type === "sports" && label.sports) {
+      if (
+        label.sports.sport_type &&
+        ![
+          "Football", "Basketball", "Cricket", "Tennis", "Baseball", "Soccer",
+          "Hockey", "Rugby", "Volleyball", "Golf", "Swimming", "Athletics",
+          "Boxing", "Cycling", "Wrestling"
+        ].includes(label.sports.sport_type)
+      ) {
+        setIsCustomSport(true);
+      }
+    }
+  }, [label, brandsData]);
+
   // Auto-select category and sector when product is selected
   useEffect(() => {
     if (selectedBrand && selectedBrand !== "other" && selectedProduct) {
@@ -197,19 +221,21 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
     }
   }, [selectedProduct, selectedBrand, brandsData, form]);
 
-  // Set brand to "other" when ad.type is PSA
+  // Handle PSA brand logic
   useEffect(() => {
     if (adType === "PSA") {
       form.setValue("ad.brand", "other");
       setIsCustomBrand(true);
       form.setValue("ad.product", "");
       form.setValue("ad.sector", "");
-    } else {
-      form.setValue("ad.brand", "");
-      setIsCustomBrand(false);
-      form.setValue("ad.category", "");
-      form.setValue("ad.product", "");
-      form.setValue("ad.sector", "");
+    } else if (adType === "COMMERCIAL_BREAK" || adType === "SPOT_OUTSIDE_BREAK") {
+      if (!selectedBrand || selectedBrand === "other") {
+        form.setValue("ad.brand", "");
+        setIsCustomBrand(false);
+        form.setValue("ad.category", "");
+        form.setValue("ad.product", "");
+        form.setValue("ad.sector", "");
+      }
     }
     setIsCustomCategory(false);
   }, [adType, form]);
@@ -272,6 +298,8 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
   // Check if form is valid for submission
   const isFormValid = () => {
     if (!labelType) return false;
+
+    const watchedValues = form.watch();
 
     switch (labelType) {
       case "song":
@@ -357,12 +385,12 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
     }
   };
 
-  const onSubmit = async (data: CreateLabel) => {
+  const onSubmit = async (data: UpdateLabel) => {
     setIsSubmitting(true);
     try {
-      const response = await LabelService.createLabel(data);
+      const response = await LabelService.updateLabel(label.id, data);
       if (response.success) {
-        toast.success(response.message || "Label created successfully");
+        toast.success(response.message || "Label updated successfully");
         setOpen(false);
         form.reset();
         setIsCustomBrand(false);
@@ -371,7 +399,7 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
         onSuccess?.();
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to create label");
+      toast.error(error.message || "Failed to update label");
     } finally {
       setIsSubmitting(false);
     }
@@ -394,22 +422,18 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
     setIsCustomCategory(false);
   };
 
-  useEffect(() => {
-    form.setValue("event_ids", selectedEventIds);
-  }, [selectedEventIds, form]);
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button disabled={selectedEventIds.length === 0}>
-          Label {selectedEventIds.length} Event{selectedEventIds.length === 1 ? "" : "s"}
+        <Button variant="ghost" size="sm" aria-label="Edit label">
+          <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>Create Label</DialogTitle>
+          <DialogTitle>Edit Label</DialogTitle>
           <DialogDescription>
-            Create a new label for {selectedEventIds.length} selected event{selectedEventIds.length === 1 ? "" : "s"}.
+            Edit the label with ID {label.id}.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -1173,7 +1197,6 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                               disabled={isSubmitting}
                               onChange={(e) => {
                                 field.onChange(e);
-                                // Sync program_name and movie_name with event_name
                                 form.setValue("promo.program_name", e.target.value);
                                 form.setValue("promo.movie_name", e.target.value);
                               }}
@@ -1256,7 +1279,7 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                               <Input {...field} value={field.value ?? ""} placeholder="Enter custom sport type" disabled={isSubmitting} />
                             </FormControl>
                             <FormMessage />
-                          </FormItem>
+                        </FormItem>
                         )}
                       />
                     )}
@@ -1325,7 +1348,7 @@ export function LabelEventsDialog({ selectedEventIds, onSuccess }: LabelEventsDi
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting || !isFormValid()}>
-                {isSubmitting ? "Creating..." : "Create Label"}
+                {isSubmitting ? "Updating..." : "Update Label"}
               </Button>
             </DialogFooter>
           </form>

@@ -52,6 +52,7 @@ import {
 } from "@/services/labels.service";
 import EventFilters from "./labeled-filters";
 import { ViewLabelDialog } from "./view-label-dialog";
+import { EditLabelDialog } from "./edit-label-dialog";
 
 // Loading component
 function EventTableSkeleton() {
@@ -219,7 +220,12 @@ const columns: ColumnDef<LabelWithDetails>[] = [
   {
     header: "Actions",
     id: "actions",
-    cell: ({ row }) => <ViewLabelDialog label={row.original} />,
+    cell: ({ row }) => (
+      <div className="flex gap-2">
+        <ViewLabelDialog label={row.original} />
+        <EditLabelDialog label={row.original} onSuccess={() => window.location.reload()} />
+      </div>
+    ),
     size: 100,
     enableSorting: false,
   },
